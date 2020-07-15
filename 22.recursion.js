@@ -24,6 +24,7 @@ function recursion(level, param) {
  *        "()()()"
  *      ]
  */
+
  /**
  * @param {number} n
  * @return {string[]}
