@@ -56,8 +56,29 @@ function TreeNode (idx, label, childs) {
   this.childs= childs
 }
 var countSubTrees = function(n, edges, labels) {
+  let g = Array.from(Array(n), () => [])
+  edges.forEach((item, index) => {
+    g[item[0]].push(item[1])
+    g[item[1]].push(item[0])
+  });
+  const dfs = function(now, pre) {
+    f[now][labels[now].charCodeAt() - "a".charCodeAt()] = 1
+    for(let nex of g[now]) {
+      if(nex != pre) {
+        dfs(nex, now)
+        for(let i = 0; i < 26; i++) {
+          f[now][i] += f[nex][i]
+        }
+      }
+    }
+  }
   let ans = new Array(n).fill(0)
-
+  let f = Array.from(Array(n), () => Array(26).fill(0))
+  dfs(0, -1)
+  let ans = []
+  for (let i = 0; i <= n; i++) {
+    ans.push(f[i][labels[i].charCodeAt() - "a".charCodeAt()])
+  }
   return ans
 };
 
