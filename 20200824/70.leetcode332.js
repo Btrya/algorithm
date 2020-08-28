@@ -22,7 +22,6 @@
 var findItinerary = function(tickets) {
     const res = ['JFK']; // 初始放入起点'JFK'
     const map = {};      // 邻接表
-  
     for (const ticket of tickets) { // 建表
       const [from, to] = ticket;
       if (!map[from]) {
@@ -30,11 +29,9 @@ var findItinerary = function(tickets) {
       }
       map[from].push(to);
     }
-  
     for (const city in map) { // 按照字母顺序，小的在前
       map[city].sort();
     }
-  
     const dfs = (city, used) => { // 当前访问的城市、已用掉的机票数
       if (used == tickets.length) { 
         return true;
@@ -55,7 +52,6 @@ var findItinerary = function(tickets) {
         }
       }
     };
-  
     dfs('JFK', 0); // 从'JFK'城市开始遍历，当前用掉0张机票
     return res;
 };
