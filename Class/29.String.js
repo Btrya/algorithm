@@ -126,3 +126,76 @@ var longestCommonPrefix = function(strs) {
   }
   return strs[0].substr(0, low)
 };
+
+/**
+ * 最长回文子串
+ * 给定一个字符串 s，找到 s 中最长的回文子串。你可以假设 s 的最大长度为 1000。
+ * 示例 1：
+ * 
+ * 输入: "babad"
+ * 输出: "bab"
+ * 注意: "aba" 也是一个有效答案。
+ * 示例 2：
+ * 
+ * 输入: "cbbd"
+ * 输出: "bb"
+ */
+/**
+ * @param {string} s
+ * @return {string}
+ */
+// Manacher算法 时间复杂度O(n)
+var longestPalindrome = function(s) {
+  if (!s || s.length < 2) return s  // 1. 极端条件直接return
+  let s_f = '#' + s.split('').join('#') + '#' // 处理过的字符串
+  let c = 0, R = 0, len = s.length, t_len = s_f.length, maxLen = 0, maxIndex = 0, originIndex = 0, p = new Array(t_len)
+  p[0] = 0
+  for (let i = 1; i < t_len - 1; i++) {
+    let j = 2 * c - i
+    if (i < R) {
+      p[i] = Math.min(p[j], R - i)
+    } else {
+      p[i] = 0
+    }
+    let left = i - p[i] - 1, right = i + p[i] + 1
+    while (left >= 0 && right < t_len && s_f[left] == s_f[right]) {
+      left--
+      right++
+      p[i]++
+    }
+    if (i + p[i] > R) {
+      c = i
+      R = i + p[i]
+    }
+    if (p[i] > maxLen) {
+      maxLen = p[i]
+      maxIndex = i
+      originIndex = parseInt((i - p[i]) / 2)
+    }
+  }
+  return s.substring(originIndex, originIndex + maxLen)
+};
+
+// 中心扩展法
+var longestPalindrome = function(s) {
+  if (!s || s.length < 2) return s
+  let start = 0, end = 0, n = s.length
+  const centerExpand = (left, right) => {
+    while(left >= 0 && right < n && s[left] == s[right]) {
+      left--
+      right++
+    }
+    return right - left - 1
+  }
+  for (let i = 0; i < n; i++) {
+    let len1 = centerExpand(i, i), len2 = centerExpand(i, i + 1)
+    // 两种组合取最大回文串的长度
+    let maxLen = Math.max(len1, len2)
+    if (maxLen > end - start) {
+      // 更新最大回文串的首尾字符索引
+      start = i - ((maxLen - 1) >> 1)
+      end = i + (maxLen >> 1)
+    }
+  }
+  return s.substring(start, end + 1)
+};
