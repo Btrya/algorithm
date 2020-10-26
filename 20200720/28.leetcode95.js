@@ -47,4 +47,27 @@ var generateTrees = function(n) {
   return _generate(1, n)
 };
 
+// 优化
+var generateTrees = function(n) {
+  if (!n) return []
+  const gen = (start, end) => {
+    let all = []
+    if (start > end) {
+      all.push(null)
+      return all
+    }
+    for (let i = start; i <= end; i++) {
+      let leftTrees = gen(start, i - 1)
+      let rightTrees = gen(i + 1, end)
+      for (let left of leftTrees) {
+        for (let right of rightTrees) {
+          all.push(new TreeNode(i, left, right))
+        }
+      }
+    }
+    return all
+  }
+  return gen(1, n)
+};
+
 console.log(generateTrees(3))
