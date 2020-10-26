@@ -45,7 +45,30 @@ var minFlips = function(target) {
  * @return {number}
  */
 var countPairs = function(root, distance) {
-    
+  const dfs = (node) => {
+    if (!node) return new Array(11).fill(0) // distance [0, 10]
+    if (node.left == node.right) {
+      let ret = new Array(11).fill(0)
+      ret[1] = 1
+      return ret
+    }
+    let left = dfs(node.left)
+    let right = dfs(node.right)
+    // 计数
+    for (let i = 0; i < 11; i++) {
+      for (j = distance - i; j >= 0; j--) {
+        res += left[i] * right[j]
+      }
+    }
+    // 每向上一层距离加1，超过distance的节点抛弃
+    for (let i = 9; i >= 0; i--) {
+      left[i + 1] = right[i] + left[i]
+    }
+    return left
+  }
+  let res = 0
+  dfs(root)
+  return res
 };
 
 
