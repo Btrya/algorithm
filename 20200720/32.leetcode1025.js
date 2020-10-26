@@ -17,3 +17,8 @@
 var divisorGame = function(N) {
   return N % 2 == 0
 };
+
+// 位运算更快
+var divisorGame = function(N) {
+  return (N & 1) === 0;
+};
