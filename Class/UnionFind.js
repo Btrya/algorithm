@@ -10,17 +10,17 @@ class UnionFind {
     this.setCount = n;
   }
 
-  findset(x) {
+  find(x) {
     if (this.parent[x] === x) {
       return x;
     }
-    this.parent[x] = this.findset(this.parent[x]);
+    this.parent[x] = this.find(this.parent[x]);
     return this.parent[x];
   }
 
-  unite(a, b) {
-    let x = this.findset(a),
-      y = this.findset(b);
+  union(a, b) {
+    let x = this.find(a),
+      y = this.find(b);
     if (x === y) {
       return false;
     }
@@ -33,9 +33,13 @@ class UnionFind {
     return true;
   }
 
-  connected(a, b) {
-    const x = this.findset(a),
-      y = this.findset(b);
+  connect(a, b) {
+    const x = this.find(a),
+      y = this.find(b);
     return x === y;
+  }
+
+  getCount() {
+    return this.setCount
   }
 }
