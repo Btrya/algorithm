@@ -24,7 +24,6 @@ var findMaxAverage = function(nums, k) {
   maxSum = sum
   while (i < n) {
     sum = sum - nums[i - k] + nums[i]
-    sum += nums[i] - nums[i - k]
     maxSum = Math.max(maxSum, sum)
     i++
   }
