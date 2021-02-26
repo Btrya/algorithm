@@ -74,3 +74,41 @@ function getBit(word) {
   }
   return res;
 }
+
+
+/** 拓展题目 
+ * 传入一段str 和一个字符x，返回str是否有且只有一个仅由x字符组成的子字符串
+ * 示例1：
+ * 
+ * 输入：xqh12??asdvm, ?
+ * 输出：true
+ * 
+ * 示例2：
+ * 
+ * 输入：xqhasd??asd?vm, ?
+ * 输出：false
+ * 
+ * 示例3：
+ * 
+ * 输入：xqhasdasdvm, ?
+ * 输出：false
+*/
+/**
+ * @param {string} str
+ * @param {string} x
+ * @return {boolean}
+ */
+function xqhRegTest(str, x) {
+  let n = str.length, xIndex = -1
+  for (let i = 0; i < n; i++) {
+    if (str[i] === x) {
+      if (xIndex === -1 || xIndex === i - 1) xIndex = i
+      else return false
+    }
+  }
+  return xIndex != -1
+}
+
+console.log(xqhRegTest('xqh12??asdvm', '?'))
+console.log(xqhRegTest('xqhasd??asd?vm', '?'))
+console.log(xqhRegTest('xqhasdasdvm', '?'))
