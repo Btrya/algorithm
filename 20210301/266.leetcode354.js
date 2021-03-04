@@ -23,7 +23,7 @@ var maxEnvelopes = function(envelopes) {
   const n = envelopes.length
   envelopes.sort((e1, e2) => {
     if (e1[0] - e2[0]) return e1[0] - e2[0]
-    else e2[1] - e1[1]
+    else return e2[1] - e1[1]
   })
 
   const f = [envelopes[0][1]]
