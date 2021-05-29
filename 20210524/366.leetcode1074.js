@@ -28,7 +28,7 @@
   let ans = 0 
   const m = matrix.length, n = matrix[0].length
   for (let i = 0; i < m; i++) {
-    const num = new Array(n).fill(0)
+    const sum = new Array(n).fill(0)
     for (let j = i; j < m; j++) {
       for (let c = 0; c < n; c++) {
         sum[c] += matrix[j][c]
