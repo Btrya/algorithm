@@ -5,7 +5,7 @@ const REJECTED = 'rejected'
 class MyPromise {
   FULFILLED_CALLBACK_LIST = [];
   REJECTED_CALLBACK_LIST = [];
-  _status = PENDING;
+  _status = PENDING; // 这个私有变量是为了中转status，否则get status的时候会无限触发get status
 
   constructor(fn) {
     // 初始状态为pending
@@ -14,7 +14,7 @@ class MyPromise {
     this.reason = null;
 
     try {
-      fn(this.resolve.bind(this), this.reject.bind(this));
+      fn(this.resolve.bind(this), this.reject.bind(this)); // bind是因为初始化promise的传入函数不一定是箭头函数
     } catch (e) {
       this.reject(e);
     }
@@ -63,61 +63,53 @@ class MyPromise {
     const rejectedFn = this.isFunction(onRejected) ? onRejected : (reason) => {
       throw reason;
     };
-
-    const fulFilledFnWithCatch = (resolve, reject, newPromise) => {
-      queueMicrotask(() => {
-        try {
-          if (!this.isFunction(onFulfilled)) {
-            resolve(this.value);
-          } else {
+    const newPromise = new MyPromise((resolve, reject) => {
+      const fulFilledFnWithCatch = () => {
+        queueMicrotask(() => {
+          try {
             const x = fulFilledFn(this.value);
             this.resolvePromise(newPromise, x, resolve, reject);
+          } catch (e) {
+            reject(e)
           }
-        } catch (e) {
-          reject(e)
-        }
-      })
-    };
-
-    const rejectedFnWithCatch = (resolve, reject, newPromise) => {
-      queueMicrotask(() => {
-        try {
-          if (!this.isFunction(onRejected)) {
-            reject(this.reason);
-          } else {
+        })
+      };
+  
+      const rejectedFnWithCatch = () => {
+        queueMicrotask(() => {
+          try {
             const x = rejectedFn(this.reason);
             this.resolvePromise(newPromise, x, resolve, reject);
+          } catch (e) {
+            reject(e);
           }
-        } catch (e) {
-          reject(e);
+        })
+      }
+      switch (this.status) {
+        case FULFILLED: {
+          fulFilledFnWithCatch()
+          break;
         }
-      })
-    }
-
-    switch (this.status) {
-      case FULFILLED: {
-        const newPromise = new MyPromise((resolve, reject) => fulFilledFnWithCatch(resolve, reject, newPromise));
-        return newPromise;
+        case REJECTED: {
+          rejectedFnWithCatch()
+          break;
+        }
+        case PENDING: {
+          this.FULFILLED_CALLBACK_LIST.push(fulFilledFnWithCatch);
+          this.REJECTED_CALLBACK_LIST.push(rejectedFnWithCatch);
+          break;
+        }
       }
-      case REJECTED: {
-        const newPromise = new MyPromise((resolve, reject) => rejectedFnWithCatch(resolve, reject, newPromise));
-        return newPromise;
-      }
-      case PENDING: {
-        const newPromise = new MyPromise((resolve, reject) => {
-          this.FULFILLED_CALLBACK_LIST.push(() => fulFilledFnWithCatch(resolve, reject, newPromise));
-          this.REJECTED_CALLBACK_LIST.push(() => rejectedFnWithCatch(resolve, reject, newPromise));
-        });
-        return newPromise;
-      }
-    }
+    })
+    return newPromise
   }
 
   resolvePromise(newPromise, x, resolve, reject) {
     // 如果 newPromise 和 x 指向同一对象，以 TypeError 为据因拒绝执行 newPromise
     // 这是为了防止死循环
     if (newPromise === x) {
-      return reject(new TypeError('The promise and the return value are the same'));
+      console.log(x)
+      // return reject(new TypeError('The promise and the return value are the same'));
     }
 
     if (x instanceof MyPromise) {
@@ -229,12 +221,9 @@ class MyPromise {
 
 const test = new MyPromise((resolve, reject) => {
   setTimeout(() => {
-    resolve(1111)
+    resolve(test)
   }, 1000);
-}).then(console.log)
-
-console.log(test)
-
-setTimeout(() => {
-  console.log(test)
-}, 2000);
+}).then((reason) => {
+  console.log('asd', reason)
+  return 123
+}).then(console.log).then((value) => console.log(33))

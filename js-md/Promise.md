@@ -9,7 +9,7 @@
 
 ### 规范
 
-#### Promise Status
+#### Promise States
 有三种状态，他们之间的流转关系
 
 1. pending
@@ -20,7 +20,7 @@
 2. fulfilled
    2.1 最终态，不可变
    2.2 一个 promise 被 resolve之后会变成这个状态
-   2.3 必须拥有一个value的值
+   2.3 必须拥有一个value的值 (resolve() 会resolve一个undefined)
 3. rejected
    3.1 最终态，不可变
    3.2 一个 promise 被reject 之后会变成这个状态
@@ -67,15 +67,17 @@ promise.then(onFulfilled, onRejected)
   ```js
     resolvePromise(promise2, x, resolve, reject)
   ```
-  7.1 如果promise2和x相等，reject typeError
+  7.1 如果promise2和x相等，reject TypeError
   7.2 如果x是一个promise
       如果x是pending，promise必须要在pending状态，直到x的状态改变
       如果x是 fulfilled, value -> fulfilled
-      如果x是 rejected, value -> rejected
+      如果x是 rejected, reason -> rejected
   7.3 如果 x 是一个Object / Function
-      去获取 x.then, 如果报错 reject reason
+      去获取 x.then, 如果报错 reject e (可能修改了原型链)
       then 是一个函数， then.call(x, resolvePromiseFn, rejectPromiseFn)
 
+      resolvePromiseFn 的入参是y,执行resolvePromise(newPromise, y, resolve, reject)
+      如果调用then的时候抛出了异常e, reject reaon
 ## 实现 Promise
 
 1. `const promise = new Promise();`  代表 Promise 应该是一个构造函数或者 class。
