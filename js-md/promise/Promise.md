@@ -113,3 +113,62 @@ promise.then(onFulfilled, onRejected)
 4. 静态方法和实例方法有什么区别？
 5. generator 特性是什么？如果遍历一个数组，只调用一次next，会输出所有值吗？
 6. async await规范？
+
+
+## 微任务与宏任务
+js在异步模式，异步任务主要分为宏任务和微任务两种，宏任务称为 Task , 微任务称为 Jobs。
+宏任务主要由宿主(浏览器，node)发起的，微任务由 JS 自身发起
+
+### 宏任务创建方式
+- setTimeout
+- setInterval
+- MessageChannel
+- I/O,事件队列
+- setImmediate(Node环境)
+- script(整体代码块)
+
+### 微任务创建方式
+- requestAnimationFrame(有争议)
+- MutaionObserver(浏览器环境)
+- Promise.[then/catch/finally]
+- process.nextTick(node环境)
+- queueMicrotask
+
+### 如何理解  script（整体代码块）是个宏任务?
+如果同时存在两个 srcipt 代码块，会首先在执行第一个 srcipt 代码块中的同步代码，如果这个过程中创建了微任务并进入了微任务队列，第一个script同步代码执行完之后，会首先去清空微任务队列，再去开启第二个 script 代码块的执行。
+
+### 什么是 EvnetLoop ？
+![Image text](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/2baaf009636748c491898aafeceddb32~tplv-k3u1fbpfcp-watermark.image)
+1. 判断宏任务队列是否为空
+- 不为空 -> 执行最早进入队列的任务 -> 执行下一步
+- 空 -> 执行下一步
+
+2. 判断微任务队列是否为空
+- 不为空 -> 执行最早进入队列的任务 -> 继续检查微任务队列是否为空
+- 空 -> 执行下一步
+
+例题
+```js
+let promise = new Promise((resolve, reject) => {
+  console.log(2)  // 同步2
+
+  queueMicrotask(() => { // 微任务a
+    console.log(3) // 同步a1
+    setTimeout(() => { // 微任务中的宏任务aa
+      console.log(4)
+    }, 0)
+    console.log(5) // 同步a2
+    resolve()
+  })
+
+  setTimeout(() => { // 宏任务b
+    console.log(6)
+  }, 0)
+
+  console.log(7) // 同步7
+})
+console.log(8) // 同步8
+promise.then(res => { // 微任务c
+  console.log(9)
+})
+```
