@@ -184,6 +184,16 @@ type T0 = Extract<"a" | "b" | "c", "a" | "f"> // "a"
 type T1 = Extract<string | number | (() => void), Function> // () => void
 ```
 
+
+## 返回res类型定义
+
+```ts
+interface UserInfo {
+  name: string
+}
+
+Axios.get<UserInfo>('./info').then(res => {})
+```
 ## 面试题及实战
 
 1. 你觉得使用ts的好处是什么？
