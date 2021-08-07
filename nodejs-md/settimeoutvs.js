@@ -14,15 +14,15 @@ setTimeout(() => {
  * 在同一个I/O回调中执行
  * timeout 固定在后
  */
-const fs = require('fs')
+// const fs = require('fs')
 
-fs.readFile(__filename, () => {
-  setTimeout(() => {
-    console.log('fs timeout')
-  }, 0);
+// fs.readFile(__filename, () => {
+//   setTimeout(() => {
+//     console.log('fs timeout')
+//   }, 0);
   
-  setImmediate(() => {
-    console.log('fs immediate')
-  });
-})
+//   setImmediate(() => {
+//     console.log('fs immediate')
+//   });
+// })
 
