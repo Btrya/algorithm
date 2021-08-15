@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    // log 插件
+    const logger = {
+      install(Vue, options) {
+        console.log(options, Vue)
+        // 参数处理
+        // ...
+
+        Object.defineProperty(Vue.prototype, '$log', {
+          value: () => console.log('打印日志了'),
+          configurable: false,
+          enumerable: false,
+          writable: false
+        })
+      }
+    }
+
+    Vue.use(logger)
+
+    new Vue({
+      el: document.querySelector('#root'),
+      template: `<h1>hello plugin!</h1>`,
+      created() {
+        this.$log()
+      }
+    })
+    /**
+     * plugin的原理例子
+     */
+    class Plugin {
+      constructor() {
+        this.plugins = []
+        this.options = {}
+      }
+
+      use(plugin) {
+        this.plugins.push(plugin)
+      }
+
+      apply() {
+        this.plugins.forEach(plugin => exexPlugin(plugin))
+      }
+
+      exexPlugin(plugin) {
+        const { install } = plugin
+        if (install) {
+          install(Vue, this.options)
+        }
+      }
+    }
+  </script>
+</body>
+</html>
