@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+  <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    /**
+     * import Button from './react/components/button'
+     * 
+     * new Vue({
+     *  el,
+     *  components: {
+     *    'el-button': Button
+     *  },
+     *  template: `<el-button><x-child/></el-button>`
+     * })
+     */ 
+
+    // 判断是不是 React 组件， 如果不是 Vue 组件，那么就是 React 组件
+    const isReactComponent = component => {
+      // 这只是一个判断
+      return !(
+        typeof component === 'function' && component.prototype && 
+        (
+          component.prototype.constructor.super && component.prototype.constructor.super.isVue ||
+          component.prototype instanceof Vue
+        )
+      )
+    }
+
+    // React 里面挂载 Vue
+    class VueWrapper extends React.Component {
+      constructor(props) {
+        super(props)
+        this.currentVueComponent = props.component
+      }
+
+      componentWillUnmount() {
+        this.vueInstance.$destroy()
+      }
+
+      createVueInstance = el => {
+        const { component, on, ...props } = this.props
+        this.vueInstance = new Vue({
+          el,
+          data: props,
+          render(h) {
+            const children = this.children
+            return h(
+              'btrya-internal-component', // 这里就相当于渲染传递过来的子组件本身了
+              {
+                props: this.$data,
+                on
+              },
+              [
+                // 这里又是在 React 环境使用 Vue 组件了，所以要用到刚刚写的 ReactWrapper
+                h(
+                  'asaki-internal-react-wrapper',
+                  {
+                    props: {
+                      component: () => React.createElement('div', {}, this.children)
+                    }
+                  }
+                )
+              ]
+            )
+          },
+          components: {
+            // compoent 现在挂的就是传递过来的插槽拿到的子组件
+            'btrya-internal-component': component,
+            'asaki-internal-react-wrapper': ReactWrapper
+          }
+        })
+      }
+
+      render() {
+        return React.createElement('div', { ref: this.createVueInstance })
+      }
+    }
+
+    // HOC
+    const makeReactComponent = (Component) => {
+      return class ReactRunInVue extends React.Component {
+        static displayName = 'vue-react'
+        constructor(props) {
+          super(props)
+          this.state = {
+            ...props
+          }
+        }
+
+        wrapChildren(children) {
+          // Vue
+          return {
+            render: h => h('div', children)
+          }
+        }
+
+        render() {
+          const { children, ...rest } = this.state
+          // 这里的处理是因为 vue 环境 (vue 里面跑 react)
+          // 所以拿到的 children 实际都是插槽过来的，所以需要处理 (要在 React 里面泡一下 Vue 组件)
+          const wrappedChildren = this.wrapChildren(children)
+          return React.createElement(
+            Component,
+            { ...rest },
+            children && React.createElement(VueWrapper, { component: wrappedChildren })
+          )
+        }
+      }
+    }
+
+    // ReactWrapper 组件， Vue 组件
+    // 就是 Resolver 实际跑的就是这个组件
+    const ReactWrapper = {
+      props: ['component'],
+      render(h) {
+        return h('div', { ref: 'react' })
+      },
+      methods: {
+        // 在 mounted 之后，去渲染 React 组件到 div 里面，
+        // 核心在这，本质上 React 要再 vue 里面跑的核心就是渲染到一个 div 上
+        // 同理，大家可以玩玩 svelte -> React/Vue
+        mountReactComponent(component) {
+          const Component = makeReactComponent(component)
+          // 处理一下 children， 让 React 能认识
+          const children = this.$slots.default !== void 0 ? { children: this.$slots.default } : {}
+          ReactDOM.render(
+            React.createElement(
+              Component,
+              { ...this.$attrs, ...this.$listeners, ...children, ref: ref => (this.reactComponentRef = ref) }
+            ),
+            this.$refs.react
+          )
+        }
+      },
+      mounted() {
+        this.mountReactComponent(this.$props.component)
+      },
+      beforeDestroy() {
+        ReactDOM.unmountComponentAtNode(this.$refs.react)
+      },
+      inheritAttrs: false,
+      // watch 到属性，组件等的变化，通知到 React 组件采取相对应的变化
+      // 怎么通知？ setState
+      // 组件变化了？ 重新 mount 一个
+      watch: {
+        $attrs: {
+          handler() {
+            this.reactComponentRef.setState({ ...this.$attrs })
+          },
+          deep: true
+        },
+        '$props.component': {
+          handler(newComponent) {
+            this.mountReactComponent(newComponent)
+          }
+        }
+      }
+    }
+
+    // 如果是 React 组件的话，处理一下，说白了就是转成 Vue 组件
+    // 然后把 React 组件，也就是这里的参数，和 attrs/listeners 等，都传递到了一个特殊的 Wrapper 组件中
+    // 所以，最终都是在 Wrapper 组件里面去完成 React 组件的挂载，属性传递等
+    const Resolver = (component) => { // 输入是一个 React 组件，输出是一个 Vue 组件
+      return {
+        components: {
+          ReactWrapper // 最终在这个组件里完成
+        },
+        props: [],
+        inheritAttrs: false,
+        render(h) {
+          return h(
+            'react-wrapper',
+            {
+              props: { component },
+              attrs: this.$attrs,
+              on: this.$listeners
+            }),
+          this.$slots.default
+        }
+      }
+    }
+
+    // 1. 通过插件，去找到组件，判断是不是 React 组件，如果是的话，走特殊的处理
+    const ReactRunInVuePlugin = {
+      install(Vue, options) {
+        // 保留原始的 components 的合并策略
+        const originalOptionMergeStrategies = Vue.config.optionMergeStrategies.components
+        // 重写 components 的合并策略
+        Vue.config.optionMergeStrategies.components = (parent, ...args) => {
+          // 执行原策略，拿到结果
+          const mergedComponentsOptions = originalOptionMergeStrategies(parent, ...args)
+          // 判断，走不走 React 处理逻辑
+          const wrappedComponents = mergedComponentsOptions 
+          ? Object.entries(mergedComponentsOptions).reduce((acc, [k, v]) => ({ // 遍历对象 { 'el-button': ElButton }
+            ...acc,
+            [k]: isReactComponent(v) ? Resolver(v) : v 
+          }), {})
+          : mergedComponentsOptions
+          // 对象 mixin 一下
+          return Object.assign(mergedComponentsOptions, wrappedComponents)
+        }
+
+        Vue.prototype.constructor.isVue = true
+      }
+    }
+
+    // 测试的 test
+    class Button extends React.Component {
+      render() {
+        return React.createElement('div', {}, [
+          React.createElement('h2', {}, this.props.children)
+        ])
+      }
+    }
+
+    Vue.use(ReactRunInVuePlugin)
+    
+    new Vue({
+      el: document.querySelector('#root'),
+      template: `
+        <div>
+            <h1>hello ReactRunInVuePlugin!</h1>
+            <el-button>
+              <span>click me!</span>
+            </el-button>
+        </div>
+      `,
+      components: {
+        'el-button': Button
+      }
+    })
+  </script>
+</body>
+</html>
