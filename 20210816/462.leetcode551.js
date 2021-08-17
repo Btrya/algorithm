@@ -32,7 +32,7 @@
  * @param {string} s
  * @return {boolean}
  */
- var checkRecord = function(s) {
+var checkRecord = function(s) {
   let ACount = 0
   let LCount = 0
   for (let i = 0; i < s.length; ++i) {
