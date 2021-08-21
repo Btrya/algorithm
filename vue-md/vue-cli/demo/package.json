@@ -1,0 +1,11 @@
+{
+  "name": "demo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Btrya",
+  "license": "MIT",
+  "scripts": {
+    "build": "bb",
+    "clean": "bb clean"
+  }
+}

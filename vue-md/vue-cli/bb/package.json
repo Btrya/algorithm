@@ -1,0 +1,12 @@
+{
+  "name": "bb",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Btrya",
+  "license": "MIT",
+  "devDependencies": {
+    "minimist": "^1.2.5",
+    "webpack": "^5.51.1"
+  },
+  "bin": "bin/index.js"
+}
