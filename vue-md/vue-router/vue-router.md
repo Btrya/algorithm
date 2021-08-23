@@ -35,4 +35,4 @@ About
 
 1. 浏览器支持的 History api
 2. 点击浏览器的 返回/前进按钮
-3. 
+3. router-link是不可以触发的
