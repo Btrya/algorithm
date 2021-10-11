@@ -301,7 +301,7 @@ function Game(arg) {
 Game.prototype.getName = function() {
   return this.name
 }
-
+// Store类
 function Store() {
   this.shop = 'steam'
 }
@@ -314,7 +314,7 @@ function LOL(arg) {
   Game.call(this, arg)
   Store.call(this, arg)
 }
-// LOL 继承 Game
+// LOL 继承 Game、Store
 LOL.prototype = Object.create(Game.prototype)
 Object.assign(LOL.prototype, Store.prototype)
 LOL.prototype.constructor = LOL
