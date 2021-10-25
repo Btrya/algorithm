@@ -22,3 +22,24 @@ var moveZeroes = function(nums) {
     }
   }
 };
+
+// 冒泡排序
+var moveZeroes = function(nums) {
+  // 交换元素
+  function swap(arr, i, j) {
+    let temp = arr[i]
+    arr[i] = arr[j]
+    arr[j] = temp
+    // 当然你也可以使用es6语法 [arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  let zeroCount = 0
+  for (let i = 0; i < nums.length - zeroCount; ++i) {
+    if (nums[i] == 0) {
+      for (let j = i; j < nums.length - zeroCount - 1; ++j) {
+        swap(nums, j, j + 1)
+      }
+      zeroCount ++
+      i--
+    }
+  }
+};
