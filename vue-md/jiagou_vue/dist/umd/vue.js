@@ -225,6 +225,105 @@
 
   function initComputed(vm) {}
 
+  // ast 语法树 是用对象来描述原生语法的    虚拟dom 用对象来描述dom节点的
+  var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*"; // abc-aaa
+
+  var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")"); // <aaa:asdads>
+
+  var startTagOpen = new RegExp("^<".concat(qnameCapture)); // 标签开头的正则 捕获的内容是标签名
+
+  var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>")); // 匹配标签结尾的 </div>
+
+  var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // 匹配属性的
+
+  var startTagClose = /^\s*(\/?)>/; // 匹配标签结束的 >  <div>
+
+  function start(tagName, attrs) {
+    console.log('开始标签:', tagName, '属性是:', attrs);
+  }
+
+  function chars(text) {
+    console.log("文本是:", text);
+  }
+
+  function end(tagName) {
+    console.log('结束标签:', tagName);
+  }
+
+  function parseHTML(html) {
+    // 不停的去解析html
+    while (html) {
+      var textEnd = html.indexOf('<');
+
+      if (textEnd == 0) {
+        // 如果当前索引为0 肯定是一个标签 开始标签 结束标签
+        var startTagMatch = parseStartTag(); // 通过这方法获取到匹配的结果 tagName, attrs
+
+        if (startTagMatch) {
+          start(startTagMatch.tagName, startTagMatch.attrs);
+          continue; // 如果开始标签匹配完毕后 继续下一次匹配
+        }
+
+        var endTagMatch = html.match(endTag);
+
+        if (endTagMatch) {
+          advance(endTagMatch[0].length);
+          end(endTagMatch[1]);
+          continue;
+        }
+      }
+
+      var text = void 0;
+
+      if (textEnd >= 0) {
+        text = html.substring(0, textEnd);
+      }
+
+      if (text) {
+        advance(text.length);
+        chars(text);
+      }
+    }
+
+    function advance(n) {
+      html = html.substring(n);
+    }
+
+    function parseStartTag() {
+      var start = html.match(startTagOpen);
+
+      if (start) {
+        var match = {
+          tagName: start[1],
+          attrs: []
+        };
+        advance(start[0].length); // 将标签删除
+
+        var _end, attr;
+
+        while (!(_end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+          advance(attr[0].length); // 将属性删除
+
+          match.attrs.push({
+            name: attr[1],
+            value: attr[3] || attr[4] || attr[5]
+          });
+        }
+
+        if (_end) {
+          // 去掉开始标签的 >
+          advance(_end[0].length);
+          return match;
+        }
+      }
+    }
+  }
+
+  function compileToFunction(template) {
+    parseHTML(template);
+    return function render() {};
+  }
+
   function initMixin(Vue) {
     // 初始化流程
     Vue.prototype._init = function (options) {
@@ -234,6 +333,31 @@
       vm.$options = options; // 初始化状态
 
       initState(vm); // 分割代码
+      // 如果用户传入了 el 属性，需要把页面渲染出来
+      // 如果用户传入了 el 就要实现挂载流程
+
+      if (vm.$options.el) {
+        vm.$mount(vm.$options.el);
+      }
+    };
+
+    Vue.prototype.$mount = function (el) {
+      var vm = this;
+      var options = vm.$options;
+      el = document.querySelector(el); // 默认先会查找有没有render方法，没有render会采用template，template也没有就用el中的内容
+
+      if (!options.render) {
+        // 对模板进行编译
+        var template = options.template;
+
+        if (!template && el) {
+          template = el.outerHTML; // 有兼容性问题，可以创建一个div然后扔进去
+        }
+
+        var render = compileToFunction(template);
+        options.render = render; // 我们需要将template 转化成 render方法 vue1.0 2.0有了虚拟dom
+      } // options.render
+
     };
   }
 

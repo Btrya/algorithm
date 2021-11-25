@@ -2,7 +2,7 @@ import babel from 'rollup-plugin-babel'
 import serve from 'rollup-plugin-serve'
 
 export default {
-  input: './src/indexj.js', // 以哪个文件作为打包的入口
+  input: './src/index.js', // 以哪个文件作为打包的入口
   output: {
     file: 'dist/umd/vue.js', // 出口文件
     name: 'Vue', // 指定打包后全局变量的名字

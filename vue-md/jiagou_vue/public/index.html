@@ -7,6 +7,10 @@
   <title>Document</title>
 </head>
 <body>
+  <div id="app">
+    <p>{{name}}</p>
+    <span>{{age}}</span>
+  </div>
   <script src="/dist/umd/vue.js"></script>
   <script>
     let vm = new Vue({
@@ -18,11 +22,7 @@
           }, list: [{a: 1, b : 2}]
         }
       },
-      computed() {},
-      watch() {}
     })
-    console.log(vm._data)
-    vm._data.list.push({c: 1})
   </script>
 </body>
 </html>
