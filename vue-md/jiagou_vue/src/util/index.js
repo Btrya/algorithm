@@ -18,3 +18,19 @@ export function def(data, key, value) {
     value
   })
 }
+/**
+ * 取值代理
+ * @param {*} vm 实例
+ * @param {*} source 取值位置
+ * @param {*} key 键
+ */
+export function proxy(vm, source, key) {
+  Object.defineProperty(vm, key, {
+    get() {
+      return vm[source][key]
+    },
+    set(newValue) {
+      vm[source][key] = newValue
+    }
+  })
+}
