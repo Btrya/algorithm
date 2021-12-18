@@ -4,6 +4,44 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+
+      if (enumerableOnly) {
+        symbols = symbols.filter(function (sym) {
+          return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+        });
+      }
+
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i] != null ? arguments[i] : {};
+
+      if (i % 2) {
+        ownKeys(Object(source), true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(Object(source)).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
+      }
+    }
+
+    return target;
+  }
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -40,6 +78,21 @@
     if (protoProps) _defineProperties(Constructor.prototype, protoProps);
     if (staticProps) _defineProperties(Constructor, staticProps);
     return Constructor;
+  }
+
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
   }
 
   function _slicedToArray(arr, i) {
@@ -139,6 +192,8 @@
         ob.observeArray(inserted); // 将新增属性继续观测
       }
 
+      ob.dep.notify(); // 如果用户调用了push方法 我会通知当前这个dep去更新
+
       return result;
     };
   });
@@ -182,11 +237,105 @@
       }
     });
   }
+  var LIFECYCLE_HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed'];
+  var strats = {};
+
+  function mergeHook(parentVal, childVal) {
+    if (childVal) {
+      if (parentVal) {
+        return parentVal.concat(childVal);
+      } else {
+        return [childVal];
+      }
+    } else {
+      return parentVal;
+    }
+  }
+
+  LIFECYCLE_HOOKS.forEach(function (hook) {
+    strats[hook] = mergeHook;
+  });
+  function mergeOptions(parent, child) {
+    var options = {};
+
+    for (var key in parent) {
+      mergeField(key);
+    }
+
+    for (var _key in child) {
+      // 如果已经合并过了 就不需要再次合并了
+      if (!parent.hasOwnProperty(_key)) {
+        mergeField(_key);
+      }
+    } // 默认合并策略 但是有些属性需要有特殊的合并方式 比如生命周期/data
+
+
+    function mergeField(key) {
+      if (strats[key]) {
+        return options[key] = strats[key](parent[key], child[key]);
+      }
+
+      if (_typeof(parent[key]) === 'object' && _typeof(child[key]) === 'object') {
+        options[key] = _objectSpread2(_objectSpread2({}, parent[key]), child[key]);
+      } else if (child[key] == null) {
+        options[key] = parent[key];
+      } else {
+        options[key] = child[key];
+      }
+    }
+
+    return options;
+  }
+
+  var id$1 = 0;
+
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+
+      this.id = id$1++;
+      this.subs = [];
+    }
+
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        // 让这个watcher 记住我当前的dep
+        Dep.target.addDep(this);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher); // 观察者模式
+      }
+    }]);
+
+    return Dep;
+  }();
+
+  var stack$1 = []; // 目前可以做到 将watcher保留起来和移除
+
+  function pushTarget(watcher) {
+    Dep.target = watcher;
+    stack$1.push(watcher);
+  }
+  function popTarget() {
+    stack$1.pop();
+    Dep.target = stack$1[stack$1.length - 1];
+  }
 
   var Observer = /*#__PURE__*/function () {
     function Observer(value) {
       _classCallCheck(this, Observer);
 
+      this.dep = new Dep(); // 单独给数组用的
       // vue 如果数据的层次过多 需要递归的去解析对象中的属性，依次增加set和get方法
       // vue3 proxy 不需要递归 也不需要增加set和get方法
       // 给每一个监控过的对象都增加一个__ob__属性
@@ -195,6 +344,7 @@
       //   configurable: false, // 不可被配置
       //   value: this
       // })
+
       def(value, '__ob__', this); // 对数组监控
 
       if (Array.isArray(value)) {
@@ -232,23 +382,56 @@
   }();
 
   function defineReactive(data, key, value) {
-    observe(value); // 递归实现深度检测
+    var dep = new Dep(); // 这个dep是给对象用的
+    // 这里这个value可能是数组 也可能是对象，返回的结果是observer的实例，当前这个value对应的observer
+
+    var childOb = observe(value); // 递归实现深度检测
     // 闭包
 
     Object.defineProperty(data, key, {
+      configurable: true,
+      enumerable: true,
       get: function get() {
-        // 获取值的时候做一些操作
+        // 获取值的时候做一些操作 这里取到的每个属性都对应着自己的watcher
+        if (Dep.target) {
+          // 如果当前有watcher
+          dep.depend(); // 意味着我要将watcher存起来
+
+          if (childOb) {
+            // 数组的依赖收集
+            childOb.dep.depend(); // 收集了数组的相关依赖
+            // 如果数组中还有数组
+
+            if (Array.isArray(value)) {
+              depenArray(value);
+            }
+          }
+        }
+
         return value;
       },
       set: function set(newValue) {
         // 也可以做一些操作
-        console.log('更新数据', newValue);
         if (newValue === value) return;
         observe(newValue); // 继续劫持用户设置的值，因为有可能用户设置的值是一个对象
 
         value = newValue;
+        dep.notify(); // 通知依赖的watcher来进行一个更新操作
       }
     });
+  }
+
+  function depenArray(value) {
+    for (var i = 0; i < value.length; ++i) {
+      var current = value[i]; // 将数组中的每一个都取出来 数据变化后 也去更新视图
+      // 数组中的数组的依赖收集
+
+      current.__ob__ && current.__ob__.dep.depend();
+
+      if (Array.isArray(current)) {
+        depenArray(current);
+      }
+    }
   }
 
   function observe(data) {
@@ -527,6 +710,7 @@
     return code;
   }
 
+  // ast 语法树 是用对象来描述原生语法的    虚拟dom 用对象来描述dom节点的
   function compileToFunction(template) {
     // 1. 解析html字符串 将html字符串 => ast语法树
     var root = parseHTML(template); // 需要将 ast 语法树生成最终的 render 函数 就是字符串拼接 (模板引擎)
@@ -538,6 +722,8 @@
     return renderFn;
   }
 
+  var id = 0;
+
   var Watcher = /*#__PURE__*/function () {
     function Watcher(vm, exprOrFn, callback, options) {
       _classCallCheck(this, Watcher);
@@ -545,15 +731,40 @@
       this.vm = vm;
       this.callback = callback;
       this.options = options;
+      this.id = id++;
       this.getter = exprOrFn; // 将内部传过来的回调函数放到getter属性上
 
-      this.get();
+      this.depsId = new Set(); // set不能放重复项
+
+      this.deps = [];
+      this.get(); // 调用get方法 会让渲染watcher执行
     }
 
     _createClass(Watcher, [{
+      key: "addDep",
+      value: function addDep(dep) {
+        // watcher里不能放重复的dep  dep里不能放重复的watcher
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.depsId.add(id);
+          this.deps.push(dep);
+          dep.addSub(this);
+        }
+      }
+    }, {
       key: "get",
       value: function get() {
-        this.getter();
+        pushTarget(this); // 把watcher存起来 Dep.target
+
+        this.getter(); // 渲染watcher的执行
+
+        popTarget(); // 移除watcher
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        this.get();
       }
     }]);
 
@@ -571,7 +782,9 @@
 
       var el = createElm(vnode);
       parentElm.insertBefore(el, oldElm.nextSibling);
-      parentElm.removeChild(oldElm);
+      parentElm.removeChild(oldElm); // 将渲染好的结果返回
+
+      return el;
     } // 递归创建真实节点 替换掉老的节点
 
   }
@@ -633,7 +846,8 @@
     // Wathcer 用来渲染的
     // vm._render 通过解析的render方法 渲染出虚拟dom
     // vm._update 通过虚拟dom创建真实dom
-    // 渲染页面
+
+    callHook(vm, 'beforeMount'); // 渲染页面
 
     var updateComponent = function updateComponent() {
       // 无论是渲染还是更新都会调用此方法
@@ -643,6 +857,18 @@
 
 
     new Watcher(vm, updateComponent, function () {}, true); // true表示它是一个渲染watcher
+
+    callHook(vm, 'mounted');
+  }
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook]; // [fn, fn, ...]
+
+    if (handlers) {
+      // 找到对应的钩子依次执行
+      for (var i = 0; i < handlers.length; ++i) {
+        handlers[i].call(vm);
+      }
+    }
   }
 
   function initMixin(Vue) {
@@ -650,11 +876,14 @@
     Vue.prototype._init = function (options) {
       // 数据的劫持
       var vm = this; // vue 中使用 thi.$options 指代的就是用户传递的属性
+      // vm.constructor.options 将用户传递的 和 全局的进行一个合并 比如 A extends Vue
 
-      vm.$options = options; // 初始化状态
+      vm.$options = mergeOptions(vm.constructor.options, options);
+      callHook(vm, 'beforeCreate'); // 初始化状态
 
       initState(vm); // 分割代码
-      // 如果用户传入了 el 属性，需要把页面渲染出来
+
+      callHook(vm, 'created'); // 如果用户传入了 el 属性，需要把页面渲染出来
       // 如果用户传入了 el 就要实现挂载流程
 
       if (vm.$options.el) {
@@ -739,6 +968,29 @@
     };
   }
 
+  function initGlobalAPI(Vue) {
+    // 整合了所有的全局相关的内容
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      // 如何实现两个对象的合并
+      this.options = mergeOptions(this.options, mixin);
+    }; // 生命周期的合并策略 [beforeCreate, beforeCreate]
+    // Vue.mixin({
+    //   a: 1,
+    //   beforeCreate() {
+    //     console.log('mixin 1')
+    //   },
+    // })
+    // Vue.mixin({
+    //   b: 2,
+    //   beforeCreate() {
+    //     console.log('mixin 2')
+    //   },
+    // })
+
+  }
+
   // Vue 的核心代码 只是Vue的一个声明
 
   function Vue(options) {
@@ -749,7 +1001,9 @@
 
   initMixin(Vue);
   renderMixin(Vue);
-  lifecycleMixin(Vue);
+  lifecycleMixin(Vue); // 初始化全局的api
+
+  initGlobalAPI(Vue);
 
   return Vue;
 

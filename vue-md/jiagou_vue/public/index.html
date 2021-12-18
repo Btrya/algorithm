@@ -10,19 +10,37 @@
   <div id="app" style="color: red;font-size: 16px;">
     <p>hello {{name}}</p>
     <span>{{age}}</span>
+    <span>{{list}}</span>
   </div>
   <script src="/dist/umd/vue.js"></script>
   <script>
     let vm = new Vue({
       el: '#app',
       data() {
-        return { name: 'Btrya', age: 18, address: {
+        return { name: 'Btrya', age: { age: 18 }, address: {
             country: 'China',
             city: 'ShenZhen'
-          }, list: [{a: 1, b : 2}]
+          }, list: [[1, 2, 3]]
         }
       },
+      // beforeCreate() {
+      //   console.log('user')
+      // },
+      // created() {
+      //   console.log('created', this.age)
+      // }
+      // beforeMount() {
+      //   console.log(this.$el)
+      // },
+      // mounted() {
+      //   console.log(this.$el)
+      // },
     })
+    setTimeout(() => {
+      vm.age = 199 // 依赖收集
+      // 希望数据变化 可以自动的重新执行渲染watcher vm._update(vm._render())
+      vm.list[0].push(7)
+    }, 1000);
   </script>
 </body>
 </html>
