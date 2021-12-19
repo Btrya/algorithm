@@ -7,22 +7,36 @@
   <title>Document</title>
 </head>
 <body>
-  <div id="app" style="color: red;font-size: 16px;">
+  <div id="app">
+    <my-component></my-component>
+    <my-component></my-component>
+    <my-component></my-component>
+  </div>
+  <!-- <div id="app" style="color: red;font-size: 16px;">
     <p>hello {{name}}</p>
     <span>{{age}}</span>
     <span>{{list}}</span>
-  </div>
+  </div> -->
   <script src="/dist/umd/vue.js"></script>
   <script>
+    // 内部会调用 Vue.extend 返回一个组件的狗仔函数 通过new 这个构造函数产生实例
+    Vue.component('my-component', {
+        template: '<div>hello 你好</div>',
+    });
     let vm = new Vue({
       el: '#app',
       data() {
         return { name: 'Btrya', age: { age: 18 }, address: {
             country: 'China',
             city: 'ShenZhen'
-          }, list: [[1, 2, 3]]
+          }, list: [1, 2, 3]
         }
       },
+      components: {
+        'my-component': {
+          template: '<div>123</div>'
+        }
+      }
       // beforeCreate() {
       //   console.log('user')
       // },
@@ -36,11 +50,17 @@
       //   console.log(this.$el)
       // },
     })
-    setTimeout(() => {
-      vm.age = 199 // 依赖收集
-      // 希望数据变化 可以自动的重新执行渲染watcher vm._update(vm._render())
-      vm.list[0].push(7)
-    }, 1000);
+    console.log(Vue.options)
+    // 希望数据变化 可以自动的重新执行渲染watcher vm._update(vm._render())
+    // vm.list.push(7)
+    // vm.list.push(9)
+    // vm.list.push(10)
+    // vm.list.push(11)
+    // vm.list.push(12)
+
+    // vm.$nextTick(() => {
+    //   console.log(vm.$el.innerHTML)
+    // })
   </script>
 </body>
 </html>

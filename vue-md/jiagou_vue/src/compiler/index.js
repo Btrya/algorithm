@@ -1,6 +1,6 @@
 // ast 语法树 是用对象来描述原生语法的    虚拟dom 用对象来描述dom节点的
 import { parseHTML } from "./parser-html.js";
-import { generate } from "./generate.js";
+import { generate } from './generate';
 
 export function compileToFunction(template) {
   // 1. 解析html字符串 将html字符串 => ast语法树

@@ -255,6 +255,20 @@
   LIFECYCLE_HOOKS.forEach(function (hook) {
     strats[hook] = mergeHook;
   });
+
+  function mergeAssets(parentVal, childVal) {
+    var res = Object.create(parentVal); // res.__proto__ = parentVal
+
+    if (childVal) {
+      for (var key in childVal) {
+        res[key] = childVal[key];
+      }
+    }
+
+    return res;
+  }
+
+  strats.components = mergeAssets;
   function mergeOptions(parent, child) {
     var options = {};
 
@@ -285,6 +299,14 @@
     }
 
     return options;
+  }
+  function isReservedTag(tagName) {
+    var str = 'p,div,span,input,button';
+    var obj = {};
+    str.split(',').forEach(function (tag) {
+      obj[tag] = true;
+    });
+    return obj[tagName];
   }
 
   var id$1 = 0;
@@ -722,6 +744,51 @@
     return renderFn;
   }
 
+  var callbacks = [];
+  var waiting = false;
+
+  function flushCallback() {
+    callbacks.forEach(function (cb) {
+      return cb();
+    });
+    waiting = false;
+    callbacks = [];
+  }
+
+  function nextTick(cb) {
+    // 多次调用nextTick 如果没有刷新的时候 就先把他放到数组中
+    // 刷新后 更改waiting
+    callbacks.push(cb);
+
+    if (waiting === false) {
+      setTimeout(flushCallback, 0);
+      waiting = true;
+    }
+  }
+
+  var queue = [];
+  var has = {};
+
+  function flushSchedularQueue() {
+    queue.forEach(function (watcher) {
+      return watcher.run();
+    });
+    queue = [];
+    has = {};
+  }
+
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (has[id] == null) {
+      queue.push(watcher);
+      has[id] = true; // 宏任务后微任务 (vue 里面使用 Vue.nextTick)
+      // Vue.nextTick = promise / mutationObserver / setImmediate / setTimeout
+
+      nextTick(flushSchedularQueue);
+    }
+  }
+
   var id = 0;
 
   var Watcher = /*#__PURE__*/function () {
@@ -764,6 +831,12 @@
     }, {
       key: "update",
       value: function update() {
+        queueWatcher(this); // 等待着 一起来更新 因为每次调用 update的时候 都放入了一watcher
+        // this.get()
+      }
+    }, {
+      key: "run",
+      value: function run() {
         this.get();
       }
     }]);
@@ -773,6 +846,12 @@
 
   function patch(oldVnode, vnode) {
     // 1.判断是更新还是要渲染
+    if (!oldVnode) {
+      // 这个是组件的挂在 vm.$mount()
+      // 同归当前的虚拟节点创建元素并返回
+      return createElm(vnode);
+    }
+
     var isRealElement = oldVnode.nodeType;
 
     if (isRealElement) {
@@ -789,6 +868,20 @@
 
   }
 
+  function createComponent$1(vnode) {
+    // 需要创建组件的实例
+    var i = vnode.data;
+
+    if ((i = i.hook) && (i = i.init)) {
+      i(vnode);
+    } // 执行完毕后
+
+
+    if (vnode.componentInstance) {
+      return true;
+    }
+  }
+
   function createElm(vnode) {
     // 根据虚拟节点创建真实的节点
     var tag = vnode.tag;
@@ -798,6 +891,14 @@
         text = vnode.text; // 是标签就创建标签
 
     if (typeof tag === 'string') {
+      // 不是tag是字符串的就是普通的html 还有可能是我们的组件
+      // 实例化组件
+      if (createComponent$1(vnode)) {
+        // 表示是组件
+        // 这里应该返回的是真实的dom元素
+        return vnode.componentInstance.$el;
+      }
+
       vnode.el = document.createElement(tag);
       updateProperties(vnode);
       children.forEach(function (child) {
@@ -871,7 +972,7 @@
     }
   }
 
-  function initMixin(Vue) {
+  function initMixin$1(Vue) {
     // 初始化流程
     Vue.prototype._init = function (options) {
       // 数据的劫持
@@ -911,34 +1012,66 @@
 
 
       mountComponent(vm, el);
-    };
+    }; // 用户调用的nextTick
+
+
+    Vue.prototype.$nextTick = nextTick;
   }
 
-  function createElement(tag) {
-    var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  function createElement(vm, tag) {
+    var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     var key = data.key;
 
     if (key) {
       delete data.key;
     }
 
-    for (var _len = arguments.length, children = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-      children[_key - 2] = arguments[_key];
+    for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+      children[_key - 3] = arguments[_key];
     }
 
-    return vnode(tag, data, key, children, undefined);
+    if (isReservedTag(tag)) {
+      return vnode(tag, data, key, children, undefined);
+    } else {
+      // 组件 找到组件的定义
+      var Ctor = vm.$options.components[tag];
+      return createComponent(vm, tag, data, key, children, Ctor);
+    }
   }
-  function createTextNode(text) {
+
+  function createComponent(vm, tag, data, key, children, Ctor) {
+    if (isObject(Ctor)) {
+      Ctor = vm.$options._base.extend(Ctor);
+    }
+
+    data.hook = {
+      init: function init(vnode) {
+        // 当前组件的实例 就是componentInstance
+        var child = vnode.componentInstance = new Ctor({
+          _isComponent: true
+        }); // 组件的挂载
+
+        child.$mount();
+      }
+    };
+    return vnode("vue-component-".concat(Ctor.cid, "-").concat(tag), data, key, undefined, {
+      Ctor: Ctor,
+      children: children
+    });
+  }
+
+  function createTextNode(vm, text) {
     return vnode(undefined, undefined, undefined, undefined, text);
   }
 
-  function vnode(tag, data, key, children, text) {
+  function vnode(tag, data, key, children, text, componentOptions) {
     return {
       tag: tag,
       data: data,
       key: key,
       children: children,
-      text: text
+      text: text,
+      componentOptions: componentOptions
     };
   } // 虚拟节点 就是通过 _c _v 实现都用对象来描述dom的操作
 
@@ -947,11 +1080,11 @@
     // _v 创建文本的虚拟节点
     // _s JSON.stringify
     Vue.prototype._c = function () {
-      return createElement.apply(void 0, arguments); // tag, data, children1, children2...
+      return createElement.apply(void 0, [this].concat(Array.prototype.slice.call(arguments))); // tag, data, children1, children2...
     };
 
     Vue.prototype._v = function (text) {
-      return createTextNode(text);
+      return createTextNode(this, text);
     };
 
     Vue.prototype._s = function (val) {
@@ -968,10 +1101,7 @@
     };
   }
 
-  function initGlobalAPI(Vue) {
-    // 整合了所有的全局相关的内容
-    Vue.options = {};
-
+  function initMixin(Vue) {
     Vue.mixin = function (mixin) {
       // 如何实现两个对象的合并
       this.options = mergeOptions(this.options, mixin);
@@ -991,6 +1121,58 @@
 
   }
 
+  var ASSETS_TYPE = ['component', 'filter', 'directive'];
+
+  function initAssetRegisters(Vue) {
+    ASSETS_TYPE.forEach(function (type) {
+      Vue[type] = function (id, definition) {
+        if (type === 'component') {
+          // 注册全局组件
+          // 使用extend 方法将对象编程构造函数
+          // 子组件可能也有这个 Vue.component 方法
+          definition = this.options._base.extend(definition); // = Vue.extend(definition)
+        }
+
+        this.options[type + 's'][id] = definition;
+      };
+    });
+  }
+
+  function initExtend(Vue) {
+    // 为什么要有子类 和 父类  new Vue (vue的构造函数)
+    // 创建子类 和父类没有关系 但是可以继承父类 扩展的时候都扩展到自己的属性
+    var cid = 0;
+
+    Vue.extend = function (extendOptions) {
+      var Sub = function VueComponent(options) {
+        this._init(options);
+      };
+
+      Sub.cid = cid++;
+      Sub.prototype = Object.create(this.prototype);
+      Sub.prototype.constructor = Sub;
+      Sub.options = mergeOptions(this.options, extendOptions);
+      Sub.mixin = this.mixin; // mixin use ...compoennt
+
+      return Sub;
+    };
+  }
+
+  function initGlobalAPI(Vue) {
+    // 整合了所有的全局相关的内容
+    Vue.options = {};
+    initMixin(Vue); // 初始化的全局过滤器 指令 组建
+
+    ASSETS_TYPE.forEach(function (type) {
+      Vue.options[type + 's'] = {};
+    });
+    Vue.options._base = Vue; // _base 是vue的构造函数
+    // 注册extend方法
+
+    initExtend(Vue);
+    initAssetRegisters(Vue);
+  }
+
   // Vue 的核心代码 只是Vue的一个声明
 
   function Vue(options) {
@@ -999,7 +1181,7 @@
   } // 通过引入文件的方式 给Vue原型上添加方法
 
 
-  initMixin(Vue);
+  initMixin$1(Vue);
   renderMixin(Vue);
   lifecycleMixin(Vue); // 初始化全局的api
 

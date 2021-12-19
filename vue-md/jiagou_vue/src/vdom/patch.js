@@ -1,5 +1,10 @@
 export function patch(oldVnode, vnode) {
   // 1.判断是更新还是要渲染
+  if (!oldVnode) {
+    // 这个是组件的挂在 vm.$mount()
+    // 同归当前的虚拟节点创建元素并返回
+    return createElm(vnode)
+  }
   const isRealElement = oldVnode.nodeType
   if (isRealElement) {
     const oldElm = oldVnode // div id="app"
@@ -15,10 +20,28 @@ export function patch(oldVnode, vnode) {
 
 }
 
+function createComponent(vnode) {
+  // 需要创建组件的实例
+  let i = vnode.data
+  if ((i = i.hook) && (i = i.init)) {
+    i(vnode)
+  } 
+  // 执行完毕后
+  if (vnode.componentInstance) {
+    return true
+  }
+}
+
 function createElm(vnode) { // 根据虚拟节点创建真实的节点
   let { tag, data, key, children, text } = vnode
   // 是标签就创建标签
   if (typeof tag === 'string') {
+    // 不是tag是字符串的就是普通的html 还有可能是我们的组件
+    // 实例化组件
+    if (createComponent(vnode)) { // 表示是组件
+      // 这里应该返回的是真实的dom元素
+      return vnode.componentInstance.$el
+    }
     vnode.el = document.createElement(tag)
     updateProperties(vnode)
     children.forEach(child => { // 递归创建儿子节点 将儿子节点扔到父节点中
