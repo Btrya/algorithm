@@ -22,7 +22,7 @@ function genChildren(el) {
   if (children && children.length > 0) {
     return `${children.map(child => {
       return gen(child)
-    })}`
+    }).join(',')}`
   } else {
     return false
   }
