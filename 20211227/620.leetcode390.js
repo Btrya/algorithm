@@ -24,12 +24,12 @@
  */
  var lastRemaining = function(n) {
   let start = 1, step = 1
-  let isLR = true
+  let isL2R = true
   while (n > 1) {
-    if (isLR || (n & 1) == 1) start += step
-    n >>= 1
-    step <<= 1
-    isLR = !isLR
+    if (isL2R || (n & 1) == 1) start += step // 从左到右的时候 或者n是奇数的时候 累加步长
+    n >>= 1 // 减一半
+    step <<= 1 // 步长翻倍
+    isL2R = !isL2R // 反向
   }
   return start
 };
