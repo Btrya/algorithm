@@ -4,8 +4,16 @@ export function lifecycleMixin(Vue) {
   // 虚拟节点变成真实节点
   Vue.prototype._update = function(vnode) {
     const vm = this
-    // 我要通过虚拟节点 渲染出真实的dom
-    vm.$el = patch(vm.$el, vnode) // 需要用虚拟节点创建出真实节点 替换掉真实的$el
+    // 第一次默认 肯定不需要diff算法
+    // 虚拟节点对应的内容
+    const prevVnode = vm._vnode
+    vm._vnode = vnode // 真实渲染的内容
+    if (!prevVnode) {
+      // 我要通过虚拟节点 渲染出真实的dom
+      vm.$el = patch(vm.$el, vnode) // 需要用虚拟节点创建出真实节点 替换掉真实的$el
+    } else {
+      vm.$el = patch(prevVnode, vnode) // diff
+    }
   }
 }
 export function mountComponent(vm, el) {
