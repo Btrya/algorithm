@@ -45,3 +45,9 @@
   }
   return first >= second * 2 ? ans : -1
 };
+
+var dominantIndex = function(nums) {
+  let sortNums = [...nums].sort((a,b) => a - b)
+  let res = nums.indexOf(sortNums[nums.length - 1])
+  return sortNums[nums.length - 2] * 2 > sortNums[nums.length - 1] ? -1 : res
+};
