@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<style>
+  img{
+    height: 100px;
+    width: 100px;
+    border-radius: 50%;
+    position: relative;
+    left: 0;
+  }
+</style>
+<body>
+  <div>
+    <img id="asaki" src="http://i1.hdslb.com/bfs/face/504fe821dcc6b9a7aa88f8623c5e7e29d83af78a.jpg@96w_96h_1c.webp"/>
+  </div>
+  <script>
+    let img = document.getElementById('asaki')
+    let time = null, stepPx = 15, nowStep = 100
+    img.addEventListener('click', (e) => {
+      nowStep = 100
+      requestAnimationFrame(step)
+    })
+    function step() {
+      if (nowStep <= 0) return
+      img.style.left = (img.offsetLeft + Number(`${nowStep > stepPx ? stepPx : nowStep}`)) + 'px'
+      nowStep -= stepPx
+      requestAnimationFrame(step)
+    }
+  </script>
+</body>
+</html>
