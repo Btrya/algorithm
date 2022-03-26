@@ -20,8 +20,9 @@
     <img id="asaki" src="http://i1.hdslb.com/bfs/face/504fe821dcc6b9a7aa88f8623c5e7e29d83af78a.jpg@96w_96h_1c.webp"/>
   </div>
   <script>
-    let img = document.getElementById('asaki')
-    let time = null, stepPx = 15, nowStep = 100
+    const img = document.getElementById('asaki')
+    const stepPx = 15
+    let nowStep = 100
     img.addEventListener('click', (e) => {
       nowStep = 100
       requestAnimationFrame(step)
