@@ -37,4 +37,26 @@ function delMinChar(s, k) {
   return res
 }
 
+function delMinChar1(s, k) {
+  const n = s.length
+  let res = s.split('')
+  if (n < k) return ''
+  const charArr = Array.from(new Array(26), () => [])
+  for (let i = 0; i < n; ++i) {
+    const charCode = s[i].charCodeAt() - 97
+    charArr[charCode].push(i)
+  }
+  // 拍平数组
+  const flatArr = charArr.flat().slice(0, k).sort((a, b) => b - a)
+  for (let i = 0; i < flatArr.length; ++i) {
+    res.splice(flatArr[i], 1)
+  }
+  return res.join('')
+}
+
+console.time('includes')
 console.log(delMinChar('badabpzib', 3)) // dbpzib
+console.timeEnd('includes')
+console.time('splice')
+console.log(delMinChar1('badabpzib', 3)) // dbpzib
+console.timeEnd('splice')
