@@ -29,19 +29,21 @@
  */
 function lenLongestFibSubseq(arr: number[]): number {
   const n = arr.length,
-    idxMap = new Map<number, number>()
-  for (const [i, v] of arr.entries()) {
-    idxMap.set(v, i)
+    indices = new Map<number, number>()
+  for (let i = 0; i < n; i++) {
+    indices.set(arr[i], i)
   }
-  const dp = new Array(n).fill(0).map(() => new Array(n).fill(2))
+  const dp = new Array(n).fill(0).map(() => new Array(n).fill(0))
   let ans = 0
-  for (let i = 0; i < n - 1; ++i) {
-    for (let j = i + 1; j < n; ++i) {
-      const nxt = arr[i] + arr[j]
-      if (idxMap.has(nxt)) {
-        const k = idxMap.get(nxt)
-        dp[j][k] = dp[i][j] + 1
-        ans = Math.max(ans, dp[j][k])
+  for (let i = 0; i < n; ++i) {
+    for (let j = n - 1; j >= 0; --j) {
+      if (arr[j] * 2 <= arr[i]) {
+        break
+      }
+      if (indices.has(arr[i] - arr[j])) {
+        const k = indices.get(arr[i] - arr[j])
+        dp[j][i] = Math.max(dp[k][j] + 1, 3)
+        ans = Math.max(ans, dp[j][i])
       }
     }
   }
